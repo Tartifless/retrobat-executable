@@ -205,7 +205,9 @@ namespace RetroBat
                             foreach (var dpiLine in dpiLines)
                             {
                                 string dpiExePath = Path.Combine(appFolder, dpiLine.Trim());
-                                SetDpiAwarenessOverride(dpiExePath, true);
+
+                                if (File.Exists(dpiExePath))
+                                    SetDpiAwarenessOverride(dpiExePath, true);
                             }
                         }
                     }
