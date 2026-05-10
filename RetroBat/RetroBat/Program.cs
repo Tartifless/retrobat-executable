@@ -189,6 +189,30 @@ namespace RetroBat
             }
             SimpleLogger.Instance.Info("EmulationStation.exe found.");
 
+            // DPI Awareness
+            if (HasDpiScaling())
+            {
+                string dpiFile = Path.Combine(appFolder, "system", "tools", "dpi_awareness.txt");
+
+                if (File.Exists(dpiFile))
+                {
+                    try
+                    {
+                        var dpiLines = File.ReadAllLines(dpiFile);
+
+                        if (dpiLines.Length > 0)
+                        {
+                            foreach (var dpiLine in dpiLines)
+                            {
+                                string dpiExePath = Path.Combine(appFolder, dpiLine.Trim());
+                                SetDpiAwarenessOverride(dpiExePath, true);
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+
             // Language
             if (config.LanguageDetection)
                 WriteLanguageToES(esPath, windowsCulture);
@@ -824,6 +848,46 @@ namespace RetroBat
                     xml.Save(esSettingsPath);
             }
             catch (Exception ex) { SimpleLogger.Instance.Warning("Could not update EmulationStation theme: " + ex.Message); }
+        }
+
+        public static bool HasDpiScaling()
+        {
+            using (var key = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\FontDPI"))
+            {
+                object val = key != null ? key.GetValue("LogPixels") : null;
+                if (val is int dpi)
+                    return dpi != 96;
+            }
+
+            using (var key = Registry.CurrentUser.OpenSubKey(
+                @"Control Panel\Desktop"))
+            {
+                object val = key != null ? key.GetValue("LogPixels") : null;
+                if (val is int dpi)
+                    return dpi != 96;
+            }
+
+            return false;
+        }
+
+        public static void SetDpiAwarenessOverride(string exePath, bool enable)
+        {
+            const string keyPath = @"Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers";
+
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(keyPath, true)
+                           ?? Registry.CurrentUser.CreateSubKey(keyPath);
+
+            if (key == null)
+                return;
+
+            using (key)
+            {
+                if (enable)
+                    key.SetValue(exePath, "~ HIGHDPIAWARE", RegistryValueKind.String);
+                else
+                    key.DeleteValue(exePath, throwOnMissingValue: false);
+            }
         }
     }
 }
