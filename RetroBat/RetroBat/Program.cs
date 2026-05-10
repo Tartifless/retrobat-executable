@@ -883,10 +883,27 @@ namespace RetroBat
 
             using (key)
             {
+                string current = key.GetValue(exePath) as string ?? string.Empty;
+
+                var flags = new HashSet<string>(current.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+
                 if (enable)
-                    key.SetValue(exePath, "~ HIGHDPIAWARE", RegistryValueKind.String);
+                {
+                    if (flags.Contains("HIGHDPIAWARE"))
+                        return;
+                    flags.Add("HIGHDPIAWARE");
+                }
                 else
-                    key.DeleteValue(exePath, throwOnMissingValue: false);
+                {
+                    if (!flags.Contains("HIGHDPIAWARE"))
+                        return;
+                    flags.Remove("HIGHDPIAWARE");
+                }
+
+                if (flags.Count == 0)
+                    key.DeleteValue(exePath, false);
+                else
+                    key.SetValue(exePath, string.Join(" ", flags), RegistryValueKind.String);
             }
         }
     }
